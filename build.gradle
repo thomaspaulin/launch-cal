@@ -1,0 +1,23 @@
+group 'nz.paulin.spaceflight'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+
+    compile group: 'org.jsoup', name: 'jsoup', version: '1.10.2'
+
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.8.1'
+
+    compile 'com.google.api-client:google-api-client:1.22.0'
+    compile 'com.google.oauth-client:google-oauth-client-jetty:1.22.0'
+    compile 'com.google.apis:google-api-services-calendar:v3-rev240-1.22.0'
+
+}
