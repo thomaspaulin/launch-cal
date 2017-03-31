@@ -38,7 +38,9 @@ class Parser {
         Elements launchTableElements = document.select("table.launchcalendar");
         for (Element launchTableElement : launchTableElements) {
             Launch parsedLaunch = parseLaunch(launchTableElement);
-            launches.add(parsedLaunch);
+            if(parsedLaunch != null) {
+                launches.add(parsedLaunch);
+            }
         }
         return launches;
     }

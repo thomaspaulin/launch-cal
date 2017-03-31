@@ -1,6 +1,10 @@
 package nz.paulin.spaceflight;
 
+import com.google.api.services.calendar.model.Event;
+
 import java.time.ZonedDateTime;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Represents a launch
@@ -40,28 +44,36 @@ public class Launch {
         this.launchVehicle = builder.launchVehicle;
     }
 
-    public String getMissionName() {
+     String getMissionName() {
         return missionName;
     }
 
-    public String getLocation() {
+     String getLocation() {
         return location;
     }
 
-    public ZonedDateTime getTime() {
+     ZonedDateTime getTime() {
         return time;
     }
 
-    public int getWindow() {
+     int getWindow() {
         return window;
     }
 
-    public String getDescription() {
+     String getDescription() {
         return description;
     }
 
-    public String getLaunchVehicle() {
+     String getLaunchVehicle() {
         return launchVehicle;
+    }
+
+    static String createSummary(Launch launch) {
+        return launch.missionName;
+    }
+
+     boolean is(Event event) {
+        return event.getSummary() != null && event.getSummary().equals(Launch.createSummary(this)) && location.equals(event.getLocation());
     }
 
     @Override
@@ -71,9 +83,9 @@ public class Launch {
 
         Launch launch = (Launch) o;
 
-        if (!missionName.equals(launch.missionName)) return false;
-        if (!location.equals(launch.location)) return false;
-        return launchVehicle.equals(launch.launchVehicle);
+        return missionName.equals(launch.missionName)
+                && location.equals(launch.location)
+                && launchVehicle.equals(launch.launchVehicle);
     }
 
     @Override
@@ -86,10 +98,22 @@ public class Launch {
 
     @Override
     public String toString() {
-        return "[" + missionName + "] Launches at " + time + " from " + location + " on a " + launchVehicle + " with a " + window + " second launch window.";
+        return "[" + missionName + "] Launches at " + time + " from " + location + " on " + aOrAn(launchVehicle) + " " + launchVehicle + " with a " + window + " second launch window.";
     }
 
-    public static class Builder {
+    private static String aOrAn(String nextWord) {
+        nextWord = nextWord.toLowerCase();
+        char c = nextWord.charAt(0);
+        List<Character> vowels = Arrays.asList('a', 'e', 'i', 'o', 'u');
+        if(vowels.contains(c)) {
+            return "an";
+        } else {
+            return "a";
+        }
+    }
+
+     @SuppressWarnings("UnusedReturnValue")
+     static class Builder {
         private String missionName;
         private String location;
         private ZonedDateTime time;
@@ -97,7 +121,7 @@ public class Launch {
         private String description;
         private String launchVehicle;
 
-        public Builder() {
+         Builder() {
             this.missionName = null;
             this.location = null;
             this.time = null;
@@ -106,37 +130,37 @@ public class Launch {
             this.launchVehicle = null;
         }
 
-        public Builder setMissionName(String missionName) {
+         Builder setMissionName(String missionName) {
             this.missionName = missionName;
             return this;
         }
 
-        public Builder setLocation(String location) {
+         Builder setLocation(String location) {
             this.location = location;
             return this;
         }
 
-        public Builder setTime(ZonedDateTime time) {
+         Builder setTime(ZonedDateTime time) {
             this.time = time;
             return this;
         }
 
-        public Builder setWindow(int window) {
+         Builder setWindow(int window) {
             this.window = window;
             return this;
         }
 
-        public Builder setDescription(String description) {
+         Builder setDescription(String description) {
             this.description = description;
             return this;
         }
 
-        public Builder setLaunchVehicle(String launchVehicle) {
+         Builder setLaunchVehicle(String launchVehicle) {
             this.launchVehicle = launchVehicle;
             return this;
         }
 
-        public Launch build() {
+         Launch build() {
             return new Launch(this);
         }
     }
