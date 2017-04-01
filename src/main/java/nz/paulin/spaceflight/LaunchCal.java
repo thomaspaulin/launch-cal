@@ -147,12 +147,18 @@ public class LaunchCal {
                                 (window > 0 ?  window * 1000 : 30*60*1000)), TimeZone.getTimeZone(time.getZone())))
                         .setTimeZone("UTC");
 
+                // set source
+                Event.Source source = new Event.Source()
+                        .setTitle("Launch-cal Script");
+
+
                 // create event
                 Event launchEvent = new Event()
                         .setSummary(Launch.createSummary(scheduledLaunch))
                         .setStart(start)
                         .setEnd(end)
                         .setLocation(scheduledLaunch.getLocation())
+                        .setSource(source)
                         .setDescription(scheduledLaunch.getDescription());
 
                 if (!launchInCalendar) {
