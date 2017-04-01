@@ -1,7 +1,7 @@
 # launch-cal
 Space flight launch calendar parsing and calendar saving in one place.
 
-##Setup
+## Setup
 1. Create `private.json` in the `src/resources` folder to hold the private key and other 
     various fields for Google Calendar connection
 2. Run `gradle clean build`
