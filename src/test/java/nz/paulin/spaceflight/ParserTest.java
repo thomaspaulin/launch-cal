@@ -31,15 +31,15 @@ public class ParserTest extends Assert {
     }
 
     @Test
-    public void missionParsing_MonthButNoDay_Null() throws ParseException {
+    public void missionParsing_MonthButNoDay_EmptyResultList() throws ParseException {
         String html = "<table class=\"launchcalendar netm\" id=\"launch-276\"><tbody><tr><th><span class=\"net\">NET</span><span>Sep</span></th><th colspan=\"2\">STP-2</th></tr><tr><td rowspan=\"2\" class=\"vehicle\" style=\"background-image: url('http://www.spaceflightinsider.com/wp-content/plugins/mission-tracking/images/logos/operators_large/usaf.png');\"><div style=\"background-image: url('http://www.spaceflightinsider.com/wp-content/plugins/mission-tracking/images/vehicles/falcon_heavy.png');\"></div><br>Falcon Heavy</td><td colspan=\"2\" class=\"launchdetails\" style=\"background-image: url('http://www.spaceflightinsider.com/wp-content/plugins/mission-tracking/images/logos/providers_large/spacex.png');\"><table><tbody><tr><th>Location</th><td>Kennedy Space Center LC-39A</td></tr><tr><th>Time</th><td>TBD</td></tr></tbody></table></td></tr><tr><td colspan=\"2\" class=\"description\"><p>The Space Test Program-2 (STP-2) mission is comprised of a cluster of military and scientific research satellites for the United States Air Force (USAF).</p><div></div></td></tr></tbody></table>";
-        assertNull(Parser.parseLaunches(html).get(0));
+        assertTrue(Parser.parseLaunches(html).isEmpty());
     }
 
     @Test
-    public void missionParsing_TimeTBDNoWindow_Null() throws ParseException {
+    public void missionParsing_TimeTBDNoWindow_EmptyResultList() throws ParseException {
         String html = "<table class=\"launchcalendar netd\" id=\"launch-250\"><tr><th><span class=\"net\">NET</span><span>Apr 4</span></th><th colspan=\"2\">GSAT-9</th></tr><tr><td rowspan=\"2\" class=\"vehicle\" style=\"background-image: url('http://www.spaceflightinsider.com/wp-content/plugins/mission-tracking/images/logos/operators_large/isro.png');\"><div style=\"background-image: url('http://www.spaceflightinsider.com/wp-content/plugins/mission-tracking/images/vehicles/gslv_ii.png');\"></div><br />GSLV Mk II</td><td colspan=\"2\" class=\"launchdetails\" style=\"background-image: url('http://www.spaceflightinsider.com/wp-content/plugins/mission-tracking/images/logos/providers_large/isro.png');\"><table><tr><th>Location</th><td>Satish Dhawan Space Centre SLP</td></tr><tr><th>Time</th><td>TBD</td></tr></table></td></tr><tr><td colspan=\"2\" class=\"description\"><p>Launching on the GSLV-F09 mission, GSAT-9 is a multi-band communications satellite for India. The satellite will provide global positioning services for navigation, surveillance/Air Traffic Management systems over Indian airspace via the GAGAN system (GPS Aided GEO Augmented Navigation). </p><div></div></td></tr></table>";
-        assertNull(Parser.parseLaunches(html).get(0));
+        assertTrue(Parser.parseLaunches(html).isEmpty());
     }
 
     @Test
@@ -59,15 +59,15 @@ public class ParserTest extends Assert {
     }
 
     @Test
-    public void missionParsing_TimeTBDWindowPresent_Null() throws ParseException {
+    public void missionParsing_TimeTBDWindowPresent_EmptyResultList() throws ParseException {
         String html = "<table class=\"launchcalendar netm\" id=\"launch-245\"><tbody><tr><th><span class=\"net\">NET</span><span>Mar</span></th><th colspan=\"2\">SGDC-1 and Koreasat-7</th></tr><tr><td rowspan=\"2\" class=\"vehicle\" style=\"background-image: url('http://www.spaceflightinsider.com/wp-content/plugins/mission-tracking/images/logos/operators_large/misc.png');\"><div style=\"background-image: url('http://www.spaceflightinsider.com/wp-content/plugins/mission-tracking/images/vehicles/ariane_5_eca.png');\"></div><br>Ariane 5 ECA</td><td colspan=\"2\" class=\"launchdetails\" style=\"background-image: url('http://www.spaceflightinsider.com/wp-content/plugins/mission-tracking/images/logos/providers_large/arianespace.png');\"><table><tbody><tr><th>Location</th><td>Guiana Space Centre ELA-3</td></tr><tr><th>Time</th><td>TBD</td></tr><tr><th>Window</th><td>2  hours, 49 minutes</td></tr></tbody></table></td></tr><tr><td colspan=\"2\" class=\"description\"><p>Built on the Upgraded Spacebus-4000B2 platform from Thales Alenia Space, Koreasat-7 is a Ku-band communications satellite for KTsat based in South Korea. Koreasat-7's coverage zone encompasses Korea, the Philippines, Indonesia, and India. Brazilian state-owned telecommunications services provider Telebras SGDC-1 (Geostationary Defense and Strategic Communications Satellite) is a X- and Ka-band satellite for military and civil use.</p><div><h4>Related Articles:</h4><ul><li><a href=\"http://www.spaceflightinsider.com/organizations/arianespace/social-movement-continues-delay-ariane-5-launch/\"><span class=\"date\">Mar 2017: </span>‘Social movement’ continues to delay Ariane 5 launch</a></li><li><a href=\"http://www.spaceflightinsider.com/organizations/arianespace/arianespace-delays-launch-ariane-5-flight-va236-due-social-movement/\"><span class=\"date\">Mar 2017: </span>Arianespace delays launch of Ariane 5 Flight VA236 due to ‘social movement’</a></li><li><a href=\"http://www.spaceflightinsider.com/organizations/arianespace/arianespace-set-launch-two-telecom-satellites-second-ariane-5-mission-2017/\"><span class=\"date\">Mar 2017: </span>Arianespace set to launch two telecom satellites in second Ariane 5 mission of 2017</a></li></ul></div></td></tr></tbody></table>";
-        assertNull(Parser.parseLaunches(html).get(0));
+        assertTrue(Parser.parseLaunches(html).isEmpty());
     }
 
     @Test
-    public void missionParsing_NETMonthAndDayTimeTBD_Null() throws ParseException {
+    public void missionParsing_NETMonthAndDayTimeTBD_EmptyResultList() throws ParseException {
         String html = "<table class=\"launchcalendar netd\" id=\"launch-259\"><tbody><tr><th><span class=\"net\">NET</span><span>Aug 31</span></th><th colspan=\"2\">NROL-52</th></tr><tr><td rowspan=\"2\" class=\"vehicle\" style=\"background-image: url('http://www.spaceflightinsider.com/wp-content/plugins/mission-tracking/images/logos/operators_large/nro.png');\"><div style=\"background-image: url('http://www.spaceflightinsider.com/wp-content/plugins/mission-tracking/images/vehicles/atlas_v_4x0.png');\"></div><br>Atlas V 421</td><td colspan=\"2\" class=\"launchdetails\" style=\"background-image: url('http://www.spaceflightinsider.com/wp-content/plugins/mission-tracking/images/logos/providers_large/ula.png');\"><table><tbody><tr><th>Location</th><td>Cape Canaveral AFS SLC-41</td></tr><tr><th>Time</th><td>TBD</td></tr></tbody></table></td></tr><tr><td colspan=\"2\" class=\"description\"><p>NROL-52 is a classified spacecraft payload for the National Reconnaissance Office (NRO) launching via a United Launch Alliance (ULA) Atlas V in the 421 configuration, indicating the rocket will have four meter fairing, two solid rocket motors, and a single Aerojet Rocketdyne RL10C engine in the Atlas' Centaur upper stage.</p><div></div></td></tr></tbody></table>";
-        assertNull(Parser.parseLaunches(html).get(0));
+        assertTrue(Parser.parseLaunches(html).isEmpty());
     }
 
     private void testParsedLaunch(String expectedMissionName, String expectedLocation, ZonedDateTime expectedTime, int expectedWindow, String expectedLaunchVehicle, String expectedDescription, Launch parsedLaunch) {
