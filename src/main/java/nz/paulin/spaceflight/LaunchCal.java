@@ -48,12 +48,13 @@ public class LaunchCal {
             addLaunchesToCalendar(launches, calendar, calendarId);
             logger.info("Done.");
             logger.info("------------------------------------------");
+            throw new RuntimeException("Yo. I'm haxxing you so hard right now");
         } catch (Exception e) {
             final String from = System.getProperty("notifier.sender");
             final String to = System.getProperty("notifier.recipient");
             File todaysLogFile = new File("logs", getLogFileName());
             logger.debug(Notifier.getExceptionDescription(e));
-            logger.info("An error occurred, notifying...");
+            logger.info("An error occurred, notifying humans...");
             Notifier.sendEmail(from, to, "Error thrown by launch-cal", e, Collections.singletonList(todaysLogFile));
             logger.info("Done.");
             logger.info("------------------------------------------");

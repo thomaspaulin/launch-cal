@@ -7,6 +7,9 @@ import org.apache.logging.log4j.Logger;
 import javax.activation.DataHandler;
 import javax.activation.FileDataSource;
 import javax.mail.*;
+import javax.mail.event.TransportAdapter;
+import javax.mail.event.TransportEvent;
+import javax.mail.event.TransportListener;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMultipart;
@@ -36,16 +39,14 @@ class Notifier {
             final String SMTP_USER = from;
             final String SMTP_PASSWORD = System.getProperty("notifier.sender.password");
 
-            Address sender = new InternetAddress(from);
-
-            Address[] recipients = new Address[]{new InternetAddress(from)};
-
             Properties props = new Properties();
-            props.put("mail.smtp.auth", "true");
-            props.put("mail.smtp.starttls.enable", "true");
-            props.put("mail.smtp.host", SMTP_HOST);
-            props.put("mail.smtp.port", "" + SMTP_PORT);
-            props.put("mail.smtp.debug", "true");
+            props.put("mail.smtp.host",                     SMTP_HOST);
+            props.put("mail.smtp.port",                     "" + SMTP_PORT);
+            props.put("mail.smtp.auth",                     "true");
+            props.put("mail.smtp.starttls.enable",          "true");
+            props.put("mail.smtp.socketFactory.port",       SMTP_PORT);
+            props.put("mail.smtp.socketFactory.class",      "javax.net.ssl.SSLSocketFactory");
+            props.put("mail.smtp.debug",                    "true");
 
             Session session = Session.getDefaultInstance(props, new javax.mail.Authenticator() {
                 protected PasswordAuthentication getPasswordAuthentication() {
@@ -53,26 +54,36 @@ class Notifier {
                     return new PasswordAuthentication(SMTP_USER, SMTP_PASSWORD);
                 }
             });
-            Transport transport = session.getTransport("smtp");
 
             SMTPMessage smtpMessage = new SMTPMessage(session);
-            smtpMessage.addFrom(new Address[]{sender});
-            smtpMessage.setRecipient(Message.RecipientType.TO, new InternetAddress(to));
+            // sender
+            InternetAddress sender = new InternetAddress(from);
+            sender.setPersonal("Inspector Gadget");
+            // recipients
+            Address[] recipients = new Address[]{new InternetAddress(to)};
 
+            // set up sender and recipients
+            smtpMessage.addFrom(new InternetAddress[]{sender});
+            smtpMessage.setRecipients(Message.RecipientType.TO, recipients);
+
+            // set subject
             smtpMessage.setSubject(subject);
 
-            Multipart multipleContent = new MimeMultipart();
-            String message = "Hi there!\n\nSorry to bother you, but I encountered an error when trying to parse some launches. Here is a description of the exception:\n\n" + getExceptionDescription(e) + "\nI've attached some log files too.\n\nThank you!";
+            // set text and attachments
+            Multipart multipart = new MimeMultipart();
+
+            String message = "Hi there!\n\nSorry to bother you, but I encountered an error when trying to parse some " +
+                    "launches. Here is a description of the exception:\n\n" + getExceptionDescription(e) + "\nI've " +
+                    "attached some log files too.\n\nThank you!";
             BodyPart body = new MimeBodyPart();
             body.setText(message);
-            multipleContent.addBodyPart(body);
-
-            addAttachments(multipleContent, attachments);
-
-            smtpMessage.setContent(multipleContent);
-
+            multipart.addBodyPart(body);
+            addAttachments(multipart, attachments);
+            smtpMessage.setContent(multipart);
             smtpMessage.saveChanges();
 
+            // transport
+            Transport transport = session.getTransport("smtp");
             transport.connect(SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD);
             transport.sendMessage(smtpMessage, recipients);
             transport.close();
