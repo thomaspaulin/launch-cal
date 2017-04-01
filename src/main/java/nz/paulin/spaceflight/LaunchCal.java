@@ -149,8 +149,8 @@ public class LaunchCal {
 
                 // set source
                 Event.Source source = new Event.Source()
-                        .setTitle("Launch-cal Script");
-
+                        .setTitle("Launch-cal Script")
+                        .setUrl("https://github.com/thomaspaulin/launch-cal/");
 
                 // create event
                 Event launchEvent = new Event()
