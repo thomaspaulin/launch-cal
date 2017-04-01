@@ -4,7 +4,7 @@ Space flight launch calendar parsing and calendar saving in one place.
 ##Setup
 1. Create `private.json` in the `src/resources` folder to hold the private key and other 
     various fields for Google Calendar connection
-2. Run `gradle clean install`
+2. Run `gradle clean build`
 3. Set up Google credentials. If you will be running this as a CRON job make sure they are set up as a `service account`
 4. Download the client secret file as JSON and rename it to `client_secret.json`
 5. Place the secret file in the same directory as the JAR file
