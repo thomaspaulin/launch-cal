@@ -153,13 +153,16 @@ public class LaunchCal {
                         .setUrl("https://github.com/thomaspaulin/launch-cal/");
 
                 // create event
+                String description = scheduledLaunch.getDescription() + "<br><br>See <a href=\"http://www.spaceflightinsider.com/launch-schedule/\">http://www.spaceflightinsider.com/launch-schedule/</a> " +
+                        "for more information.";
+
                 Event launchEvent = new Event()
                         .setSummary(Launch.createSummary(scheduledLaunch))
                         .setStart(start)
                         .setEnd(end)
                         .setLocation(scheduledLaunch.getLocation())
                         .setSource(source)
-                        .setDescription(scheduledLaunch.getDescription());
+                        .setDescription(description);
 
                 if (!launchInCalendar) {
                     logger.debug("Inserting launch " + launchEvent + " into calendar.");
