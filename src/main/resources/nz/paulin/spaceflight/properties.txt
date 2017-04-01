@@ -1,4 +1,0 @@
-calendar.id=<your-google-calendar-id>
-notifier.sender=<error-emails-sent-as-this-address>
-notifier.sender.password=<sent-as-password>
-notifier.recipient=<error-emails-sent-to-this-address>

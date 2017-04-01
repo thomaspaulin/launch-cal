@@ -1,0 +1,4 @@
+calendar.id=<a-calendar-id>
+notifier.sender=<an-email>
+notifier.sender.password=<a-password>
+notifier.recipient=<an-email>

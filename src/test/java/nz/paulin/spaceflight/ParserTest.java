@@ -1,34 +1,14 @@
 package nz.paulin.spaceflight;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 
 
 public class ParserTest extends Assert {
-    private static Document document;
-
-    @BeforeClass
-    public static void crawl() {
-//        try {
-//            String html = Files.lines(new File(ParserTest.class.getResource("schedule-2017-03-31.html").toURI()).toPath()).reduce(String::concat).toString();
-//            document = Jsoup.parse(html);
-//        } catch (IOException | URISyntaxException e) {
-//            e.printStackTrace();
-//            fail("Set up failed");
-//        }
-    }
 
     @Test
     public void missionParsing_MonthButNoDay_EmptyResultList() throws ParseException {
@@ -70,6 +50,7 @@ public class ParserTest extends Assert {
         assertTrue(Parser.parseLaunches(html).isEmpty());
     }
 
+    @SuppressWarnings("SameParameterValue")
     private void testParsedLaunch(String expectedMissionName, String expectedLocation, ZonedDateTime expectedTime, int expectedWindow, String expectedLaunchVehicle, String expectedDescription, Launch parsedLaunch) {
         assertEquals(expectedMissionName, parsedLaunch.getMissionName());
         assertEquals(expectedLocation, parsedLaunch.getLocation());

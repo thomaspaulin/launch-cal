@@ -15,9 +15,7 @@ import com.google.api.services.calendar.model.Events;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.Instant;
@@ -31,21 +29,23 @@ import java.util.*;
 public class LaunchCal {
     private static final Logger logger = LogManager.getLogger(LaunchCal.class);
 
-    private static String calendarId = null;
-
     public static void main(String[] args) {
         System.getProperty("log4j.configurationFile", "log4j2.xml");
         try {
             setPropertiesFromFile("properties.txt");
 
-            calendarId = System.getProperty("calendar.id");
+            String calendarId = System.getProperty("calendar.id");
 
+            logger.info("Check properties loaded...");
+            testProperties();
             logger.info("Getting calendar...");
             Calendar calendar = getCalendarService();
+            logger.info("Testing calendar credentials...");
+            testCalendarCredentials(calendar, calendarId);
             logger.info("Parsing launches...");
             List<Launch> launches = Parser.parseLaunches(new URL("http://www.spaceflightinsider.com/launch-schedule/"));
             logger.info("Adding launches to calendar...");
-            addLaunchesToCalendar(launches, calendar);
+            addLaunchesToCalendar(launches, calendar, calendarId);
             logger.info("Done.");
             logger.info("------------------------------------------");
         } catch (Exception e) {
@@ -60,6 +60,33 @@ public class LaunchCal {
         }
     }
 
+    private static File getFile(String fileName) throws IOException {
+        InputStream is = ClassLoader.getSystemResourceAsStream(fileName);
+        File tmp;
+        FileOutputStream tmpOs = null;
+        try {
+            tmp = File.createTempFile("xml", "tmp");
+            tmpOs = new FileOutputStream(tmp);
+            int len;
+            byte[] b = new byte[4096];
+            while ((len = is.read(b)) != -1) {
+                tmpOs.write(b, 0, len);
+            }
+        } finally {
+            try {
+                if (is != null) {
+                    is.close();
+                }
+            } catch (Exception ignored) {}
+            try {
+                if(tmpOs != null) {
+                    tmpOs.close();
+                }
+            } catch (Exception ignored) {}
+        }
+        return tmp;
+    }
+
     private static String getLogFileName() {
         LocalDate date = LocalDate.now();
         String base = "launch-cal";
@@ -70,18 +97,32 @@ public class LaunchCal {
 
     @SuppressWarnings("SameParameterValue")
     static void setPropertiesFromFile(String filename) throws URISyntaxException, IOException {
-        URL propUrl = LaunchCal.class.getResource(filename);
-        FileInputStream propFile =   new FileInputStream(new File(propUrl.toURI()));
+        FileInputStream propFile = new FileInputStream(getFile(filename));
         Properties p = new Properties(System.getProperties());
         p.load(propFile);
         System.setProperties(p);
     }
 
+    private static void testProperties() {
+        String calendarId = System.getProperty("calendar.id");
+        String sender = System.getProperty("notifier.sender");
+        String senderPassword = System.getProperty("notifier.sender.password");
+        String recipient = System.getProperty("notifier.recipient");
+        if(calendarId == null || sender == null || senderPassword == null || recipient == null) {
+            throw new IllegalStateException("A required property was not set. Their values were: " +
+                    "calendar.id = " + calendarId +
+                    "notifier.sender = " + sender +
+                    "notifier.sender.password = [redacted]" +
+                    "notifier.recipient = " + recipient);
+        }
+        logger.info("Looks good.");
+    }
+
     /**
      * Add launches to calendar or update those that are already in the calendar
      */
-    private static void addLaunchesToCalendar(List<Launch> scheduledLaunches, Calendar calendar) throws IOException {
-        List<Event> calendarEvents = getCalendarEvents(calendar);
+    private static void addLaunchesToCalendar(List<Launch> scheduledLaunches, Calendar calendar, String calendarId) throws IOException {
+        List<Event> calendarEvents = getCalendarEvents(calendar, calendarId);
 
         for (Launch scheduledLaunch : scheduledLaunches) {
             if(scheduledLaunch != null) {
@@ -122,7 +163,7 @@ public class LaunchCal {
                     Event matchingEvent = getMatchingLaunchEvent(scheduledLaunch, calendarEvents);
                     if (matchingEvent != null) {
                         logger.debug("Updating calendar event where ID is " + matchingEvent.getId());
-                        deleteDuplicateLaunches(matchingEvent.getId(), scheduledLaunch, calendar);
+                        deleteDuplicateLaunches(matchingEvent.getId(), scheduledLaunch, calendar, calendarId);
                         calendar.events().update(calendarId, matchingEvent.getId(), launchEvent).setSendNotifications(true).execute();
                     }
                 }
@@ -130,13 +171,21 @@ public class LaunchCal {
         }
     }
 
-    private static List<Event> getCalendarEvents(Calendar calendar) throws IOException {
+    private static List<Event> getCalendarEvents(Calendar calendar, String calendarId) throws IOException {
         Events events = calendar.events().list(calendarId)
                 .setTimeMin(new DateTime(new Date(Instant.now().minusSeconds(172800).toEpochMilli())))     // look back 2 days
                 .setTimeMax(new DateTime(new Date(Instant.now().plusSeconds(31536000).toEpochMilli())))    // look forwards 365 days
                 .setTimeZone("UTC")
                 .execute();
         return events.getItems();
+    }
+
+    private static void testCalendarCredentials(Calendar calendar, String calendarId) throws IOException {
+        calendar.events().list(calendarId)
+                .setTimeMin(new DateTime(new Date()))
+                .setTimeMax(new DateTime(new Date()))
+                .execute();
+        logger.info("Looks good.");
     }
 
     /**
@@ -152,8 +201,8 @@ public class LaunchCal {
     /**
      * Check there are no other launches that should be considered equal
      */
-    private static void deleteDuplicateLaunches(final String eventId, Launch launch, Calendar calendar) throws IOException {
-        List<Event> calendarEvents = getCalendarEvents(calendar);
+    private static void deleteDuplicateLaunches(final String eventId, Launch launch, Calendar calendar, String calendarId) throws IOException {
+        List<Event> calendarEvents = getCalendarEvents(calendar, calendarId);
         if(eventId == null) throw new IllegalArgumentException("Event ID should not be null");
         for (Event calendarEvent : calendarEvents) {
             if(launch.is(calendarEvent) && !calendarEvent.getId().equals(eventId)) {
