@@ -103,3 +103,4 @@ gradle-app.setting
 # End of https://www.gitignore.io/api/java,gradle,intellij
 
 client_secret.json
+*.dont.commit.me
