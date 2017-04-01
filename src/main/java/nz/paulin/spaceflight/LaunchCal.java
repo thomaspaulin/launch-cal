@@ -48,7 +48,6 @@ public class LaunchCal {
             addLaunchesToCalendar(launches, calendar, calendarId);
             logger.info("Done.");
             logger.info("------------------------------------------");
-            throw new RuntimeException("Yo. I'm haxxing you so hard right now");
         } catch (Exception e) {
             final String from = System.getProperty("notifier.sender");
             final String to = System.getProperty("notifier.recipient");
@@ -182,6 +181,7 @@ public class LaunchCal {
     }
 
     private static void testCalendarCredentials(Calendar calendar, String calendarId) throws IOException {
+        logger.debug("Using calendar ID of " + calendarId);
         calendar.events().list(calendarId)
                 .setTimeMin(new DateTime(new Date()))
                 .setTimeMax(new DateTime(new Date()))
