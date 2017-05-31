@@ -22,8 +22,9 @@ class Parser {
 
     private static final int TIMEOUT = 20000;
 
-    private static final DateTimeFormatter SECONDS_PRESENT_FORMATTER = DateTimeFormatter.ofPattern("MMM d yyyy h:mm:ss a z");
-    private static final  DateTimeFormatter SECONDS_LESS_FORMATTER = DateTimeFormatter.ofPattern("MMM d yyyy h:mm a z");
+//    private static final DateTimeFormatter SECONDS_PRESENT_FORMATTER = DateTimeFormatter.ofPattern("MMM d yyyy h:mm:ss a z");
+//    private static final  DateTimeFormatter SECONDS_LESS_FORMATTER = DateTimeFormatter.ofPattern("MMM d yyyy h:mm a z");
+    private static final DateTimeFormatter ZULU_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ssVV");
 
     static List<Launch> parseLaunches(URL url) throws IOException, ParseException {
         return parseLaunches(Jsoup.parse(url, TIMEOUT));
@@ -87,21 +88,30 @@ class Parser {
             builder.setLaunchVehicle(tokens[0].trim());
             builder.setLocation(tokens[1].trim());
 
-            // time format looks like:
+            // time format USED to look like:
             // 11:47:52 AM GFT (UTC-3)
             // 1:13 PM ALMT (UTC+6)
+            // but NOW looks like this:
+            // 8:45 PM GFT / 2017-06-01 23:45:00Z
             String timeStr = tokens[2].trim();
             if("TBD".equals(timeStr)) {
                 return null;
             } else {
                 String s = abbreviatedMonth + " " + dayOfMonth + " " + LocalDate.now().getYear() + " " + timeStr;
-                s = s.substring(0, s.indexOf("(")-1);
+//                s = s.substring(0, s.indexOf("(")-1); // this is for a time when the date and time string had the time zone in parentheses which is no longer
                 ZonedDateTime time;
                 try {
-                    time = ZonedDateTime.parse(s, SECONDS_PRESENT_FORMATTER);
+                    // Date time should be in the format of '8:45 PM GFT / 2017-06-01 23:45:00Z' but trim it down to
+                    // `2017-06-01 23:45:00'
+                    s = s.substring(s.indexOf("/") + 1, s.length()).trim();
+                } catch (IndexOutOfBoundsException e) {
+                    logger.debug("IndexOutOfBoundsException when parsing the line '" + s + "'", e);
+                }
+                try {
+                    time = ZonedDateTime.parse(s, ZULU_TIME_FORMATTER);
                 } catch (DateTimeParseException e) {
-                    logger.debug("Falling back to the date formatter without seconds");
-                    time = ZonedDateTime.parse(s, SECONDS_LESS_FORMATTER);
+                    logger.debug("Unknown datetime format. Could it have gone back to the old form?");
+                    return null;
                 }
                 builder.setTime(time);
             }
