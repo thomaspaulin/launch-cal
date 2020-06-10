@@ -1,4 +1,7 @@
 calendar.id=<a-calendar-id>
+calendar.creator.name=<a-user-name>
+calendar.creator.email=<an-email>
+
 notifier.sender=<an-email>
 notifier.sender.password=<a-password>
 notifier.recipient=<an-email>

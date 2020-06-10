@@ -149,31 +149,46 @@ public class LaunchCal {
 
                 // set source
                 Event.Source source = new Event.Source()
-                        .setTitle("Launch-cal Script")
+                        .setTitle("Launch Cal")
                         .setUrl("https://github.com/thomaspaulin/launch-cal/");
+
+                // creator
+                final Event.Creator creator = new Event.Creator()
+                        .setDisplayName(System.getProperty("calendar.creator.name"))
+                        .setEmail(System.getProperty("calendar.creator.email"));
 
                 // create event
                 String description = scheduledLaunch.getDescription() + "<br><br>See <a href=\"http://www.spaceflightinsider.com/launch-schedule/\">http://www.spaceflightinsider.com/launch-schedule/</a> " +
                         "for more information.";
 
-                Event launchEvent = new Event()
+                final Event launchEvent = new Event()
                         .setSummary(Launch.createSummary(scheduledLaunch))
                         .setStart(start)
                         .setEnd(end)
                         .setLocation(scheduledLaunch.getLocation())
                         .setSource(source)
+                        .setCreator(creator)
+                        .setGuestsCanInviteOthers(true)
+                        .setGuestsCanModify(false)
+                        .setGuestsCanSeeOtherGuests(false)
                         .setDescription(description);
 
                 if (!launchInCalendar) {
                     logger.debug("Inserting launch " + launchEvent + " into calendar.");
-                    calendar.events().insert(calendarId, launchEvent).setSendNotifications(true).execute();
+                    calendar.events()
+                            .insert(calendarId, launchEvent)
+                            .setSendNotifications(false)
+                            .execute();
                 } else {
                     // need to look up events in calendar to find which one to update
                     Event matchingEvent = getMatchingLaunchEvent(scheduledLaunch, calendarEvents);
                     if (matchingEvent != null) {
                         logger.debug("Updating calendar event where ID is " + matchingEvent.getId());
                         deleteDuplicateLaunches(matchingEvent.getId(), scheduledLaunch, calendar, calendarId);
-                        calendar.events().update(calendarId, matchingEvent.getId(), launchEvent).setSendNotifications(true).execute();
+                        calendar.events()
+                                .update(calendarId, matchingEvent.getId(), launchEvent)
+                                .setSendNotifications(false)
+                                .execute();
                     }
                 }
             }
