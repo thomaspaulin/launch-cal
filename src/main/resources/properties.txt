@@ -2,6 +2,9 @@ calendar.id=<a-calendar-id>
 calendar.creator.name=<a-user-name>
 calendar.creator.email=<an-email>
 
+service_account.id=<an-id>
+service_account.name=<a-name>
+
 notifier.sender=<an-email>
 notifier.sender.password=<a-password>
 notifier.recipient=<an-email>

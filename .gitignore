@@ -104,3 +104,4 @@ gradle-app.setting
 
 client_secret.json
 *.dont.commit.me
+*.p12
