@@ -3,6 +3,7 @@ package nz.paulin.spaceflight;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.googleapis.util.Utils;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
@@ -18,6 +19,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.*;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
@@ -39,7 +41,7 @@ public class LaunchCal {
             logger.info("Check properties loaded...");
             testProperties();
             logger.info("Getting calendar...");
-            Calendar calendar = getCalendarService();
+            Calendar calendar = getCalendarService(System.getProperties());
             logger.info("Testing calendar credentials...");
             testCalendarCredentials(calendar, calendarId);
             logger.info("Parsing launches...");
@@ -150,7 +152,7 @@ public class LaunchCal {
                 // set source
                 Event.Source source = new Event.Source()
                         .setTitle("Launch Cal")
-                        .setUrl("https://github.com/thomaspaulin/launch-cal/");
+                        .setUrl("https://launch-cal.thomaspaulin.me");
 
                 // creator
                 final Event.Creator creator = new Event.Creator()
@@ -214,7 +216,7 @@ public class LaunchCal {
     }
 
     /**
-     * This is being run from within a loop. Shitty performance
+     * This is being run from within a loop. Poor performance
      */
     private static Event getMatchingLaunchEvent(Launch launch, List<Event> events) {
         for (Event event : events) {
@@ -267,14 +269,14 @@ public class LaunchCal {
         try {
             HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
 //            DATA_STORE_FACTORY = new FileDataStoreFactory(DATA_STORE_DIR);
-        } catch (Throwable t) {
-            t.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
             System.exit(1);
         }
     }
 
-    private static com.google.api.services.calendar.Calendar getCalendarService() throws IOException {
-        Credential credential = authorize();
+    private static com.google.api.services.calendar.Calendar getCalendarService(final Properties properties) throws IOException, GeneralSecurityException, URISyntaxException {
+        Credential credential = authorize(properties);
         return new com.google.api.services.calendar.Calendar.Builder(
                 HTTP_TRANSPORT, JSON_FACTORY, credential)
                 .setApplicationName(APPLICATION_NAME)
@@ -286,12 +288,20 @@ public class LaunchCal {
      * @return an authorized Credential object.
      * @throws IOException if the secret can't be loaded for some reason
      */
-    private static Credential authorize() throws IOException {
+    private static Credential authorize(final Properties properties) throws IOException, GeneralSecurityException {
+        final File p12File = getFile("launch-cal.p12");
 
-        GoogleCredential credential = GoogleCredential.fromStream(ClassLoader.getSystemResourceAsStream("client_secret.json"))
-                .createScoped(Collections.singletonList(CalendarScopes.CALENDAR));
+        final GoogleCredential.Builder credentialBuilder = new GoogleCredential.Builder();
+        final GoogleCredential credential = credentialBuilder
+                .setServiceAccountId(properties.getProperty("service_account.email"))
+                .setServiceAccountPrivateKeyFromP12File(p12File)
+                // https://developers.google.com/identity/protocols/oauth2/scopes#calendar
+                .setServiceAccountScopes(Collections.singletonList(CalendarScopes.CALENDAR))
+                .setJsonFactory(Utils.getDefaultJsonFactory())
+                .setTransport(Utils.getDefaultTransport())
+                .build();
 
-        logger.info("Credentials saved to " + DATA_STORE_DIR.getAbsolutePath());
+        logger.info(String.format("Credentials saved to %s", DATA_STORE_DIR.getAbsolutePath()));
         return credential;
     }
 
