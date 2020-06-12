@@ -176,7 +176,7 @@ public class LaunchCal {
                         .setDescription(description);
 
                 if (!launchInCalendar) {
-                    logger.debug("Inserting launch " + launchEvent + " into calendar.");
+                    logger.debug(String.format("Inserting launch %s into calendar.", launchEvent));
                     calendar.events()
                             .insert(calendarId, launchEvent)
                             .setSendNotifications(false)
@@ -185,7 +185,7 @@ public class LaunchCal {
                     // need to look up events in calendar to find which one to update
                     Event matchingEvent = getMatchingLaunchEvent(scheduledLaunch, calendarEvents);
                     if (matchingEvent != null) {
-                        logger.debug("Updating calendar event where ID is " + matchingEvent.getId());
+                        logger.debug(String.format("Updating calendar event where ID is %s", matchingEvent.getId()));
                         deleteDuplicateLaunches(matchingEvent.getId(), scheduledLaunch, calendar, calendarId);
                         calendar.events()
                                 .update(calendarId, matchingEvent.getId(), launchEvent)
@@ -207,7 +207,7 @@ public class LaunchCal {
     }
 
     private static void testCalendarCredentials(Calendar calendar, String calendarId) throws IOException {
-        logger.debug("Using calendar ID of " + calendarId);
+        logger.debug(String.format("Using calendar ID of %s", calendarId));
         calendar.events().list(calendarId)
                 .setTimeMin(new DateTime(new Date()))
                 .setTimeMax(new DateTime(new Date()))
@@ -233,14 +233,14 @@ public class LaunchCal {
         if(eventId == null) throw new IllegalArgumentException("Event ID should not be null");
         for (Event calendarEvent : calendarEvents) {
             if(launch.is(calendarEvent) && !calendarEvent.getId().equals(eventId)) {
-                logger.debug("Deleting duplicate event " + calendarEvent);
+                logger.debug(String.format("Deleting duplicate event " + calendarEvent));
                 calendar.events().delete(calendarId, calendarEvent.getId()).execute();
             }
         }
     }
 
     private static boolean isInCalendar(Launch launch, List<Event> events) {
-        logger.debug("Checking if launch " + launch + " is in calendar.");
+        logger.debug(String.format("Checking if launch " + launch + " is in calendar."));
         return getMatchingLaunchEvent(launch, events) != null;
     }
 
@@ -255,9 +255,6 @@ public class LaunchCal {
     private static final java.io.File DATA_STORE_DIR = new java.io.File(
             System.getProperty("user.home"), ".credentials/launch_cal_cred.json");
 
-//    /** Global instance of the {@link FileDataStoreFactory}. */
-//    private static FileDataStoreFactory DATA_STORE_FACTORY;
-
     /** Global instance of the JSON factory. */
     private static final JsonFactory JSON_FACTORY =
             JacksonFactory.getDefaultInstance();
@@ -268,9 +265,8 @@ public class LaunchCal {
     static {
         try {
             HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-//            DATA_STORE_FACTORY = new FileDataStoreFactory(DATA_STORE_DIR);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e);
             System.exit(1);
         }
     }
