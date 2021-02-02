@@ -24,20 +24,13 @@ import java.util.Properties;
 
 @SuppressWarnings("SameParameterValue")
 class Notifier {
-    private static final Logger logger = LogManager.getLogger(Notifier.class);
     private static final String SMTP_HOST = "smtp.gmail.com";
     private static final int SMTP_PORT = 587;
 
     static void sendEmail(String from, String to, String subject, Exception e, List<File> attachments) {
         try {
-            if(System.getProperty("notifier.sender") == null) {
-                LaunchCal.setPropertiesFromFile("properties.txt");
-            }
-            if(System.getProperty("notifier.sender") == null) {
-                throw new RuntimeException("I couldn't set the properties so I don't know how to email this exception :(");
-            }
             final String SMTP_USER = from;
-            final String SMTP_PASSWORD = System.getProperty("notifier.sender.password");
+            final String SMTP_PASSWORD = System.getenv("NOTIFIER_SENDER_PASSWORD");
 
             Properties props = new Properties();
             props.put("mail.smtp.host",                     SMTP_HOST);
@@ -50,7 +43,6 @@ class Notifier {
 
             Session session = Session.getDefaultInstance(props, new javax.mail.Authenticator() {
                 protected PasswordAuthentication getPasswordAuthentication() {
-                    logger.debug("Trying to authenticate as " + SMTP_USER);
                     return new PasswordAuthentication(SMTP_USER, SMTP_PASSWORD);
                 }
             });
@@ -73,12 +65,11 @@ class Notifier {
             Multipart multipart = new MimeMultipart();
 
             String message = "Hi there!\n\nSorry to bother you, but I encountered an error when trying to parse some " +
-                    "launches. Here is a description of the exception:\n\n" + getExceptionDescription(e) + "\nI've " +
-                    "attached some log files too.\n\nThank you!";
+                    "launches. Here is a description of the exception:\n\n" + getExceptionDescription(e) + "\n\nThank you!";
             BodyPart body = new MimeBodyPart();
             body.setText(message);
             multipart.addBodyPart(body);
-            addAttachments(multipart, attachments);
+//            addAttachments(multipart, attachments);
             smtpMessage.setContent(multipart);
             smtpMessage.saveChanges();
 
@@ -87,9 +78,8 @@ class Notifier {
             transport.connect(SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD);
             transport.sendMessage(smtpMessage, recipients);
             transport.close();
-        } catch (IOException | URISyntaxException | MessagingException e1) {
-            logger.fatal("I really hope someone is watching because this happened: ");
-            logger.fatal(e1);
+        } catch (IOException | MessagingException e1) {
+            e1.printStackTrace();
         }
     }
 

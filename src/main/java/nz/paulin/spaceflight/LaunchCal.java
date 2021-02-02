@@ -1,5 +1,8 @@
 package nz.paulin.spaceflight;
 
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.LambdaLogger;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
@@ -13,12 +16,11 @@ import com.google.api.services.calendar.CalendarScopes;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventDateTime;
 import com.google.api.services.calendar.model.Events;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -28,42 +30,42 @@ import java.util.*;
 /**
  * Parses the launch schedule on http://www.spaceflightinsider.com and then saves the launches with times into the given calendar.
  */
-public class LaunchCal {
-    private static final Logger logger = LogManager.getLogger(LaunchCal.class);
+public class LaunchCal implements RequestHandler<Map<String,String>, String> {
 
-    public static void main(String[] args) {
-        System.getProperty("log4j.configurationFile", "log4j2.xml");
+    @Override
+    public String handleRequest(Map<String,String> event, Context context) {
+        LambdaLogger logger = context.getLogger();
+        logger.log("Handling request\n");
         try {
-            setPropertiesFromFile("properties.txt");
 
-            String calendarId = System.getProperty("calendar.id");
+            String calendarId = System.getenv("CALENDAR_ID");
+            String serviceAccountEmail = System.getenv("SERVICE_ACCOUNT_EMAIL");
 
-            logger.info("Check properties loaded...");
-            testProperties();
-            logger.info("Getting calendar...");
-            Calendar calendar = getCalendarService(System.getProperties());
-            logger.info("Testing calendar credentials...");
-            testCalendarCredentials(calendar, calendarId);
-            logger.info("Parsing launches...");
-            List<Launch> launches = Parser.parseLaunches(new URL("http://www.spaceflightinsider.com/launch-schedule/"));
-            logger.info("Adding launches to calendar...");
-            addLaunchesToCalendar(launches, calendar, calendarId);
-            logger.info("Done.");
-            logger.info("------------------------------------------");
+            logger.log("Getting calendar\n");
+            Calendar calendar = getCalendarService(serviceAccountEmail);
+            logger.log("Testing calendar credentials\n");
+            testCalendarCredentials(calendar, calendarId, logger);
+            logger.log("Parsing launches\n");
+            List<Launch> launches = Parser.parseLaunches(new URL("http://www.spaceflightinsider.com/launch-schedule/"), logger);
+            logger.log("Adding launches to calendar\n");
+            addLaunchesToCalendar(launches, calendar, calendarId, logger);
+
+            logger.log("Request handled, going to bed now\n");
+            return "Done";
         } catch (Exception e) {
-            final String from = System.getProperty("notifier.sender");
-            final String to = System.getProperty("notifier.recipient");
-            File todaysLogFile = new File("logs", getLogFileName());
-            logger.debug(Notifier.getExceptionDescription(e));
-            logger.info("An error occurred, notifying humans...");
-            Notifier.sendEmail(from, to, "Error thrown by launch-cal", e, Collections.singletonList(todaysLogFile));
-            logger.info("Done.");
-            logger.info("------------------------------------------");
+            final String from = System.getenv("NOTIFIER_SENDER");
+            final String to = System.getenv("NOTIFIER_RECIPIENT");
+            logger.log(Notifier.getExceptionDescription(e));
+            logger.log("An error occurred, notifying humans...");
+            Notifier.sendEmail(from, to, "Error thrown by launch-cal", e, Collections.emptyList());
+            logger.log("Done.");
+            logger.log("------------------------------------------");
+            return "Done";
         }
     }
 
     private static File getFile(String fileName) throws IOException {
-        InputStream is = ClassLoader.getSystemResourceAsStream(fileName);
+        InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(fileName);
         File tmp;
         FileOutputStream tmpOs = null;
         try {
@@ -89,50 +91,19 @@ public class LaunchCal {
         return tmp;
     }
 
-    private static String getLogFileName() {
-        LocalDate date = LocalDate.now();
-        String base = "launch-cal";
-        String twoDigitMonth = (date.getMonthValue() < 10 ? "0"+date.getMonthValue() : ""+date.getMonthValue());
-        String twoDigitDay = (date.getDayOfMonth() < 10 ? "0"+date.getDayOfMonth() : ""+date.getMonthValue());
-        return base + "-" + date.getYear() + "-" + twoDigitMonth + "-" + twoDigitDay + ".log";
-    }
-
-    @SuppressWarnings("SameParameterValue")
-    static void setPropertiesFromFile(String filename) throws URISyntaxException, IOException {
-        FileInputStream propFile = new FileInputStream(getFile(filename));
-        Properties p = new Properties(System.getProperties());
-        p.load(propFile);
-        System.setProperties(p);
-    }
-
-    private static void testProperties() {
-        String calendarId = System.getProperty("calendar.id");
-        String sender = System.getProperty("notifier.sender");
-        String senderPassword = System.getProperty("notifier.sender.password");
-        String recipient = System.getProperty("notifier.recipient");
-        if(calendarId == null || sender == null || senderPassword == null || recipient == null) {
-            throw new IllegalStateException("A required property was not set. Their values were: " +
-                    "calendar.id = " + calendarId +
-                    "notifier.sender = " + sender +
-                    "notifier.sender.password = [redacted]" +
-                    "notifier.recipient = " + recipient);
-        }
-        logger.info("Looks good.");
-    }
-
     /**
      * Add launches to calendar or update those that are already in the calendar
      */
-    private static void addLaunchesToCalendar(List<Launch> scheduledLaunches, Calendar calendar, String calendarId) throws IOException {
+    private static void addLaunchesToCalendar(List<Launch> scheduledLaunches, Calendar calendar, String calendarId, LambdaLogger logger) throws IOException {
         List<Event> calendarEvents = getCalendarEvents(calendar, calendarId);
 
         for (Launch scheduledLaunch : scheduledLaunches) {
             if(scheduledLaunch != null) {
                 boolean launchInCalendar = isInCalendar(scheduledLaunch, calendarEvents);
                 if (launchInCalendar) {
-                    logger.debug("Launch is in calendar.");
+                    logger.log("Launch is in calendar.\n");
                 } else {
-                    logger.debug("Launch not found in calendar.");
+                    logger.log("Launch not found in calendar.\n");
                 }
 
                 ZonedDateTime time = scheduledLaunch.getTime();
@@ -155,9 +126,9 @@ public class LaunchCal {
                         .setUrl("https://launch-cal.thomaspaulin.me");
 
                 // creator
-                final Event.Creator creator = new Event.Creator()
-                        .setDisplayName(System.getProperty("calendar.creator.name"))
-                        .setEmail(System.getProperty("calendar.creator.email"));
+//                final Event.Creator creator = new Event.Creator()
+//                        .setDisplayName(System.getProperty("calendar.creator.name"))
+//                        .setEmail(System.getProperty("calendar.creator.email"));
 
                 // create event
                 String description = scheduledLaunch.getDescription() + "<br><br>See <a href=\"http://www.spaceflightinsider.com/launch-schedule/\">http://www.spaceflightinsider.com/launch-schedule/</a> " +
@@ -169,14 +140,13 @@ public class LaunchCal {
                         .setEnd(end)
                         .setLocation(scheduledLaunch.getLocation())
                         .setSource(source)
-                        .setCreator(creator)
+//                        .setCreator(creator)
                         .setGuestsCanInviteOthers(true)
                         .setGuestsCanModify(false)
                         .setGuestsCanSeeOtherGuests(false)
                         .setDescription(description);
 
                 if (!launchInCalendar) {
-                    logger.debug(String.format("Inserting launch %s into calendar.", launchEvent));
                     calendar.events()
                             .insert(calendarId, launchEvent)
                             .setSendNotifications(false)
@@ -185,8 +155,7 @@ public class LaunchCal {
                     // need to look up events in calendar to find which one to update
                     Event matchingEvent = getMatchingLaunchEvent(scheduledLaunch, calendarEvents);
                     if (matchingEvent != null) {
-                        logger.debug(String.format("Updating calendar event where ID is %s", matchingEvent.getId()));
-                        deleteDuplicateLaunches(matchingEvent.getId(), scheduledLaunch, calendar, calendarId);
+                        deleteDuplicateLaunches(matchingEvent.getId(), scheduledLaunch, calendar, calendarId, logger);
                         calendar.events()
                                 .update(calendarId, matchingEvent.getId(), launchEvent)
                                 .setSendNotifications(false)
@@ -206,13 +175,12 @@ public class LaunchCal {
         return events.getItems();
     }
 
-    private static void testCalendarCredentials(Calendar calendar, String calendarId) throws IOException {
-        logger.debug(String.format("Using calendar ID of %s", calendarId));
+    private static void testCalendarCredentials(Calendar calendar, String calendarId, LambdaLogger logger) throws IOException {
+        logger.log(String.format("Using calendar ID of %s%n", calendarId));
         calendar.events().list(calendarId)
                 .setTimeMin(new DateTime(new Date()))
                 .setTimeMax(new DateTime(new Date()))
                 .execute();
-        logger.info("Looks good.");
     }
 
     /**
@@ -228,19 +196,18 @@ public class LaunchCal {
     /**
      * Check there are no other launches that should be considered equal
      */
-    private static void deleteDuplicateLaunches(final String eventId, Launch launch, Calendar calendar, String calendarId) throws IOException {
+    private static void deleteDuplicateLaunches(final String eventId, Launch launch, Calendar calendar, String calendarId, LambdaLogger logger) throws IOException {
         List<Event> calendarEvents = getCalendarEvents(calendar, calendarId);
         if(eventId == null) throw new IllegalArgumentException("Event ID should not be null");
         for (Event calendarEvent : calendarEvents) {
             if(launch.is(calendarEvent) && !calendarEvent.getId().equals(eventId)) {
-                logger.debug(String.format("Deleting duplicate event " + calendarEvent));
+                logger.log(String.format("Deleting duplicate event %s%n", calendarEvent));
                 calendar.events().delete(calendarId, calendarEvent.getId()).execute();
             }
         }
     }
 
     private static boolean isInCalendar(Launch launch, List<Event> events) {
-        logger.debug(String.format("Checking if launch " + launch + " is in calendar."));
         return getMatchingLaunchEvent(launch, events) != null;
     }
 
@@ -266,13 +233,13 @@ public class LaunchCal {
         try {
             HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         } catch (Exception e) {
-            logger.error(e);
+            e.printStackTrace();
             System.exit(1);
         }
     }
 
-    private static com.google.api.services.calendar.Calendar getCalendarService(final Properties properties) throws IOException, GeneralSecurityException, URISyntaxException {
-        Credential credential = authorize(properties);
+    private static com.google.api.services.calendar.Calendar getCalendarService(String serviceAccountEmail) throws IOException, GeneralSecurityException, URISyntaxException {
+        Credential credential = authorize(serviceAccountEmail);
         return new com.google.api.services.calendar.Calendar.Builder(
                 HTTP_TRANSPORT, JSON_FACTORY, credential)
                 .setApplicationName(APPLICATION_NAME)
@@ -284,20 +251,22 @@ public class LaunchCal {
      * @return an authorized Credential object.
      * @throws IOException if the secret can't be loaded for some reason
      */
-    private static Credential authorize(final Properties properties) throws IOException, GeneralSecurityException {
+    private static Credential authorize(String serviceAccountEmail) throws IOException, GeneralSecurityException {
         final File p12File = getFile("launch-cal.p12");
 
         final GoogleCredential.Builder credentialBuilder = new GoogleCredential.Builder();
         final GoogleCredential credential = credentialBuilder
-                .setServiceAccountId(properties.getProperty("service_account.email"))
+                .setServiceAccountId(serviceAccountEmail)
                 .setServiceAccountPrivateKeyFromP12File(p12File)
+//                .setServiceAccountUser("Launch Cal Service Account")
+//                .setServiceAccountPrivateKeyId("cdc6bfc801b112587eca26e1a044f160d54e9cb89f031058ed9d6f55d28d8ca95bb8cabfc888cd5e991bf90020eef0378581e0d923c8d17e031883d0")
                 // https://developers.google.com/identity/protocols/oauth2/scopes#calendar
                 .setServiceAccountScopes(Collections.singletonList(CalendarScopes.CALENDAR))
                 .setJsonFactory(Utils.getDefaultJsonFactory())
                 .setTransport(Utils.getDefaultTransport())
                 .build();
 
-        logger.info(String.format("Credentials saved to %s", DATA_STORE_DIR.getAbsolutePath()));
+        System.out.println(String.format("Credentials saved to %s", DATA_STORE_DIR.getAbsolutePath()));
         return credential;
     }
 

@@ -1,5 +1,6 @@
 package nz.paulin.spaceflight;
 
+import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;
@@ -18,7 +19,6 @@ import java.util.List;
 
 
 class Parser {
-    private static final Logger logger = LogManager.getLogger(Parser.class);
 
     private static final int TIMEOUT = 20000;
 
@@ -26,19 +26,19 @@ class Parser {
 //    private static final  DateTimeFormatter SECONDS_LESS_FORMATTER = DateTimeFormatter.ofPattern("MMM d yyyy h:mm a z");
     private static final DateTimeFormatter ZULU_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ssVV");
 
-    static List<Launch> parseLaunches(URL url) throws IOException, ParseException {
-        return parseLaunches(Jsoup.parse(url, TIMEOUT));
+    static List<Launch> parseLaunches(URL url, LambdaLogger logger) throws IOException, ParseException {
+        return parseLaunches(Jsoup.parse(url, TIMEOUT), logger);
     }
 
-    static List<Launch> parseLaunches(String html) throws ParseException {
-        return parseLaunches(Jsoup.parse(html));
+    static List<Launch> parseLaunches(String html, LambdaLogger logger) throws ParseException {
+        return parseLaunches(Jsoup.parse(html), logger);
     }
 
-    private static List<Launch> parseLaunches(Document document) throws ParseException {
+    private static List<Launch> parseLaunches(Document document, LambdaLogger logger) throws ParseException {
         List<Launch> launches = new LinkedList<>();
         Elements launchTableElements = document.select("table.launchcalendar");
         for (Element launchTableElement : launchTableElements) {
-            Launch parsedLaunch = parseLaunch(launchTableElement);
+            Launch parsedLaunch = parseLaunch(launchTableElement, logger);
             if(parsedLaunch != null) {
                 launches.add(parsedLaunch);
             }
@@ -46,7 +46,7 @@ class Parser {
         return launches;
     }
 
-    private static Launch parseLaunch(Element launchTableElement) throws ParseException {
+    private static Launch parseLaunch(Element launchTableElement, LambdaLogger logger) throws ParseException {
         try {
             Elements rows = launchTableElement.select("tr");
             Launch.Builder builder = new Launch.Builder();
@@ -105,12 +105,12 @@ class Parser {
                     // `2017-06-01 23:45:00'
                     s = s.substring(s.indexOf("/") + 1, s.length()).trim();
                 } catch (IndexOutOfBoundsException e) {
-                    logger.debug("IndexOutOfBoundsException when parsing the line '" + s + "'", e);
+                    logger.log("IndexOutOfBoundsException when parsing the line '" + s + "'\n");
                 }
                 try {
                     time = ZonedDateTime.parse(s, ZULU_TIME_FORMATTER);
                 } catch (DateTimeParseException e) {
-                    logger.debug("Unknown datetime format. Could it have gone back to the old form?");
+                    logger.log("Unknown datetime format. Could it have gone back to the old form?\n");
                     return null;
                 }
                 builder.setTime(time);
@@ -155,7 +155,7 @@ class Parser {
             builder.setDescription(rows.get(descriptionIndex).text().trim());
 
             Launch l = builder.build();
-            logger.info("Produced launch object: " + l);
+            logger.log("Produced launch object: " + l);
             return l;
         } catch (Exception e) {
             throw new ParseException("An error occurred when parsing", e);
